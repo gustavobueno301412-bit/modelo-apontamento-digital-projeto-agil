@@ -2,12 +2,13 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto Ágil - Apontamento Digital 📝</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background-color: #0f172a; padding: 10px; display: flex; justify-content: center; }
-        .container { background: white; width: 100%; max-width: 450px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .container { background: white; width: 95%; max-width: 450px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .input { width: 100%; padding: 10px; margin-bottom: 8px; border: 2px solid #cbd5e1; border-radius: 8px; font-weight: bold; }
         .btn-status { background: #f1f5f9; padding: 10px; margin: 5px; cursor: pointer; border-radius: 8px; text-align: center; display: inline-block; font-size: 12px; }
         .btn-status.active { background: #ffedd5; border: 2px solid #f97316; color: #9a3412; }
@@ -89,7 +90,6 @@
         doc.setFontSize(18);
         doc.text("Relatório de Produção - Maxion", 20, 20);
         doc.setFontSize(12);
-        // Data incluída aqui no cabeçalho
         doc.text(`Data: ${document.getElementById('data').value} | Operador: ${document.getElementById('operador').value} | Máquina: ${document.getElementById('maquina').value}`, 20, 30);
        
         let y = 50;
@@ -139,4 +139,3 @@
 </script>
 </body>
 </html>
-
