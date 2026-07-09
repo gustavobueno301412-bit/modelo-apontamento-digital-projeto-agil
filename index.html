@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Projeto Ágil - Apontamento Digital 📝</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0f172a; padding: 10px; display: flex; justify-content: center; }
+        .container { background: white; width: 100%; max-width: 450px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .input { width: 100%; padding: 10px; margin-bottom: 8px; border: 2px solid #cbd5e1; border-radius: 8px; font-weight: bold; }
+        .btn-status { background: #f1f5f9; padding: 10px; margin: 5px; cursor: pointer; border-radius: 8px; text-align: center; display: inline-block; font-size: 12px; }
+        .btn-status.active { background: #ffedd5; border: 2px solid #f97316; color: #9a3412; }
+        .btn-action { width: 100%; padding: 15px; margin-top: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; text-transform: uppercase; }
+        .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 12px; position: relative; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center; margin-bottom:15px;">Projeto Ágil - Apontamento Digital 📝</h2>
+   
+    <input type="date" id="data" class="input">
+    <input type="text" id="operador" class="input" placeholder="👤 Operador">
+    <input type="text" id="maquina" class="input" placeholder="⚙️ Máquina">
+    <input type="text" id="peca" class="input" placeholder="📦 Código Peça">
+    <input type="text" id="op" class="input" placeholder="📋 Ordem de Produção (OP)">
+    <input type="number" id="chapa" class="input" placeholder="🆔 Chapa ID" value="">
+   
+    <div id="botoes-atv" style="text-align:center;">
+        <div class="btn-status" data-code="0" onclick="iniciarEtapa(this, 'PRODUZINDO')">🟢 PRODUZINDO - 0</div>
+        <div class="btn-status" data-code="7016" onclick="iniciarEtapa(this, 'INSPEÇÃO')">🔍 INSPEÇÃO - 8005</div>
+        <div class="btn-status" data-code="4015" onclick="iniciarEtapa(this, 'GRAVADOR')">⚙️ GRAVADOR - 4040</div>
+        <div class="btn-status" data-code="4030" onclick="iniciarEtapa(this, 'PPRPS')">✅ PPRPS - 1508</div>
+    </div>
+
+    <div id="bloco-final" style="display:none; margin-top:15px; padding:10px; border: 2px dashed #dc2626; border-radius: 10px;">
+        <div id="campo-qtd" style="display:none;"><input type="number" id="qtd" class="input" placeholder="🔢 Qtd de peças"></div>
+        <div id="campo-obs" style="display:none;"><input type="text" id="obs" class="input" placeholder="📝 Observação"></div>
+        <button class="btn-action" style="background:#dc2626;" onclick="confirmar()">✅ FINALIZAR ETAPA</button>
+    </div>
+
+    <button class="btn-action" style="background:#111827;" onclick="gerarPDF()">📄 GERAR PDF DO APONTAMENTO</button>
+    <div id="historico" style="margin-top:15px;"></div>
+</div>
+
+<script>
+    document.getElementById('data').valueAsDate = new Date();
+    let etapaAtual = null;
+    let registros = JSON.parse(localStorage.getItem('registros_maxion')) || [];
+    atualizarTela();
+
+    function iniciarEtapa(btn, nome) {
+        document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        etapaAtual = {
+            nome, cod: btn.dataset.code, data: document.getElementById('data').value,
+            op: document.getElementById('op').value, peca: document.getElementById('peca').value,
+            inicio: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        };
+        document.getElementById('bloco-final').style.display = 'block';
+        document.getElementById('campo-qtd').style.display = (btn.dataset.code === '0') ? 'block' : 'none';
+        document.getElementById('campo-obs').style.display = (btn.dataset.code !== '0') ? 'block' : 'none';
+    }
+
+    function confirmar() {
+        etapaAtual.fim = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        etapaAtual.qtd = (etapaAtual.cod === '0') ? parseInt(document.getElementById('qtd').value) || 0 : 0;
+        etapaAtual.obs = document.getElementById('obs').value;
+        registros.push(etapaAtual);
+        localStorage.setItem('registros_maxion', JSON.stringify(registros));
+       
+        document.getElementById('qtd').value = '';
+        document.getElementById('obs').value = '';
+       
+        document.getElementById('bloco-final').style.display = 'none';
+        atualizarTela();
+    }
+
+    function apagarRegistro(index) {
+        registros.splice(index, 1);
+        localStorage.setItem('registros_maxion', JSON.stringify(registros));
+        atualizarTela();
+    }
+
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text("Relatório de Produção - Maxion", 20, 20);
+        doc.setFontSize(12);
+        // Data incluída aqui no cabeçalho
+        doc.text(`Data: ${document.getElementById('data').value} | Operador: ${document.getElementById('operador').value} | Máquina: ${document.getElementById('maquina').value}`, 20, 30);
+       
+        let y = 50;
+        let totais = {};
+        let ultimaChave = null;
+
+        registros.forEach(r => {
+            let chaveAtual = `${r.op}_${r.peca}`;
+            if (ultimaChave !== null && ultimaChave !== chaveAtual) {
+                y += 5;
+                doc.setDrawColor(200, 200, 200);
+                doc.line(20, y, 190, y);
+                y += 10;
+            }
+            if(r.cod === '0') {
+                if(!totais[chaveAtual]) totais[chaveAtual] = { op: r.op, peca: r.peca, qtd: 0 };
+                totais[chaveAtual].qtd += r.qtd;
+            }
+            doc.text(`${r.data} | ${r.nome} | OP: ${r.op} | Peça: ${r.peca} | ${r.inicio}-${r.fim}`, 20, y);
+            y += 7;
+            if(r.qtd > 0) { doc.text(`>> Quantidade: ${r.qtd} peças`, 25, y); y += 7; }
+            if(r.obs) { doc.text(`>> Obs: ${r.obs}`, 25, y); y += 7; }
+            y += 5;
+            ultimaChave = chaveAtual;
+        });
+       
+        y += 10;
+        doc.text("RESUMO POR OP E PEÇA:", 20, y);
+        for(let chave in totais) {
+            y += 7;
+            doc.text(`OP ${totais[chave].op} | Peça ${totais[chave].peca}: ${totais[chave].qtd} peças`, 20, y);
+        }
+       
+        doc.save("Relatorio_Maxion.pdf");
+    }
+
+    function atualizarTela() {
+        document.getElementById('historico').innerHTML = registros.map((r, index) => `
+            <div class="card">
+                <button onclick="apagarRegistro(${index})" style="position: absolute; right: 5px; top: 5px; border:none; background:none; cursor:pointer;">🗑️</button>
+                <b>${r.nome}</b> | 📅 ${r.data}<br>
+                🕒 ${r.inicio} - ${r.fim} | 📋 OP: ${r.op} | 📦 Peça: ${r.peca}<br>
+                ${r.qtd > 0 ? '🔢 Qtd: ' + r.qtd + ' pçs' : ''}
+                ${r.obs ? '📝 Obs: ' + r.obs : ''}
+            </div>`).join('');
+    }
+</script>
+</body>
+</html>
+
